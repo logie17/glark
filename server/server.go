@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"time"
+	"sync"
 )
 
 type Server struct {
@@ -21,7 +21,7 @@ type Server struct {
 	serverListener net.Listener
 }
 
-func Server() *Server {
+func NewServer() *Server {
 	s := new(Server)
 	s.ClientPort = 9000
 	s.ServerPort = 9001
@@ -41,20 +41,22 @@ func Server() *Server {
 }
 
 func (s *Server) Serve() (err error) {
-	s.serverListener, err = net.Listen("tcp", fmt.Sprint(":", s.ServerPort))
+	s.serverListener, err = net.Listen("tcp", fmt.Sprint("127.0.0.1:", s.ServerPort))
 	if err != nil {
 		s.log(err)
 		return err
 	}
-	s.clientListener, err = net.Listen("tcp", fmt.Sprint(":", s.ClientPort))
+	s.clientListener, err = net.Listen("tcp", fmt.Sprint("127.0.0.1:", s.ClientPort))
 	if err != nil {
 		s.log(err)
 		return err
 	}
-
+	var wg sync.WaitGroup
 	go s.handleConn(s.serverListener)
+	wg.Add(1)
 	go s.handleConn(s.clientListener)
-
+	wg.Add(1)
+	wg.Wait()
 	return nil
 }
 
@@ -77,8 +79,9 @@ func (s *Server) handleStream(conn net.Conn) {
 		s.log(err)
 	}
 
-	str := string(&buf)
+	str := string(buf)
 	fmt.Println(str)
+	return
 }
 
 func (s *Server) log(v interface{}) {

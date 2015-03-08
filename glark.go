@@ -1,9 +1,11 @@
+package main
+
 import (
-	"server"
+	"github.com/logie17/glark/server"
 )
 
 func main() {
-	s := Sever()
+	s := server.NewServer()
 	err := s.Serve()
 	if err != nil {
 		println(err)
