@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"bufio"
 )
 
 type Server struct {
@@ -61,27 +62,45 @@ func (s *Server) Serve() (err error) {
 }
 
 func (s *Server) handleConn(l net.Listener) {
+	ch := make(chan string)
+	done := make(chan string)
+	
+CONNECTION:
 	for {
 		conn, err := l.Accept()
 		if err != nil {
 			s.log(err)
 			return
 		}
-		go s.handleStream(conn)
+
+		go s.handleStream(conn, ch, done)
+		println ("connection started")
+		for {
+			select {
+			case line := <-ch:
+				println(line)
+			case end := <-done:
+				println(end)
+				break CONNECTION;
+			}
+		}
 	}
 }
 
-func (s *Server) handleStream(conn net.Conn) {
-	buf := make([]byte, 1024) // No idea why I chose this
-	_, err := conn.Read(buf)
+func (s *Server) handleStream(conn net.Conn, ch chan string, done chan string) {
+	defer close(ch)
+	bufc := bufio.NewReader(conn)
 
-	if err != nil {
-		s.log(err)
+	for {
+		line, _, err := bufc.ReadLine()
+		if err != nil {
+			break
+		}
+		if string(line) == "neat" {
+			done<-"Stream Closed"
+		}
+		ch<-string(line)
 	}
-
-	str := string(buf)
-	fmt.Println(str)
-	return
 }
 
 func (s *Server) log(v interface{}) {
