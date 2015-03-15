@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"sync"
 	"bufio"
 )
 
@@ -52,43 +51,31 @@ func (s *Server) Serve() (err error) {
 		s.log(err)
 		return err
 	}
-	var wg sync.WaitGroup
-	go s.handleConn(s.serverListener)
-	wg.Add(1)
-	go s.handleConn(s.clientListener)
-	wg.Add(1)
-	wg.Wait()
+	s.handleConn(s.serverListener)
+	s.handleConn(s.clientListener)
+
+	defer func() {
+		s.serverListener.Close()
+		s.clientListener.Close()
+	}()
+
 	return nil
 }
 
 func (s *Server) handleConn(l net.Listener) {
-	ch := make(chan string)
-	done := make(chan string)
-	
-CONNECTION:
 	for {
 		conn, err := l.Accept()
 		if err != nil {
 			s.log(err)
 			return
 		}
-
-		go s.handleStream(conn, ch, done)
-		println ("connection started")
-		for {
-			select {
-			case line := <-ch:
-				println(line)
-			case end := <-done:
-				println(end)
-				break CONNECTION;
-			}
-		}
+		s.log("Connection started")
+		go s.handleStream(conn)
 	}
+
 }
 
-func (s *Server) handleStream(conn net.Conn, ch chan string, done chan string) {
-	defer close(ch)
+func (s *Server) handleStream(conn net.Conn) {
 	bufc := bufio.NewReader(conn)
 
 	for {
@@ -96,10 +83,11 @@ func (s *Server) handleStream(conn net.Conn, ch chan string, done chan string) {
 		if err != nil {
 			break
 		}
-		if string(line) == "neat" {
-			done<-"Stream Closed"
+		if string(line) == "close" {
+			s.log("Closing connection")
+			conn.Close()
 		}
-		ch<-string(line)
+		s.log(string(line))
 	}
 }
 
