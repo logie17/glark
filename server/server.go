@@ -7,7 +7,8 @@ import (
 	"bufio"
 )
 
-type Server struct {
+// 
+type server struct {
 	ClientPort uint16
 	ServerPort uint16
 
@@ -21,12 +22,9 @@ type Server struct {
 	serverListener net.Listener
 }
 
-func NewServer() *Server {
-	s := new(Server)
-	s.ClientPort = 9000
-	s.ServerPort = 9001
-	s.DefaultLanguage = "en"
-	s.Hostname = "localhost"
+// NewServer This will initialize a server
+func NewServer() *server {
+	s := &server{ClientPort: 9000, ServerPort: 9001, DefaultLanguage: "en", Hostname:"localhost"}
 
 	addrs, _ := net.InterfaceAddrs()
 	for _, addr := range addrs {
@@ -40,7 +38,7 @@ func NewServer() *Server {
 	return s
 }
 
-func (s *Server) Serve() (err error) {
+func (s *server) Serve() (err error) {
 	s.serverListener, err = net.Listen("tcp", fmt.Sprint("127.0.0.1:", s.ServerPort))
 	if err != nil {
 		s.log(err)
@@ -62,7 +60,7 @@ func (s *Server) Serve() (err error) {
 	return nil
 }
 
-func (s *Server) handleConn(l net.Listener) {
+func (s *server) handleConn(l net.Listener) {
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -75,7 +73,7 @@ func (s *Server) handleConn(l net.Listener) {
 
 }
 
-func (s *Server) handleStream(conn net.Conn) {
+func (s *server) handleStream(conn net.Conn) {
 	bufc := bufio.NewReader(conn)
 
 	for {
@@ -91,7 +89,7 @@ func (s *Server) handleStream(conn net.Conn) {
 	}
 }
 
-func (s *Server) log(v interface{}) {
+func (s *server) log(v interface{}) {
 	if s.Logger != nil && v != nil {
 		s.Logger.Println(v)
 	}
